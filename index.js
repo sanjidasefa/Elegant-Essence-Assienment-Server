@@ -50,6 +50,7 @@ async function run() {
     const serviceCollection = elegantEssence.collection("serviceColl");
     const bookingCollection = elegantEssence.collection("bookingColl");
     const decoratorCollection = elegantEssence.collection("decoratorColl");
+    const userCollection = elegantEssence.collection("userColl");
 
     app.get("/Service", async (req, res) => {
       const result = await serviceCollection.find().toArray();
@@ -186,6 +187,21 @@ async function run() {
       }
       const options = {}
       const result = await serviceCollection.updateOne(query , update , options)
+      res.send(result)
+    })
+
+     app.get('/manageBookings/:email', verifyUser, async (req, res) => {
+        const email = req.params.email
+        const result = await bookingCollection
+          .find({'client.clientEmail' : email })
+          .toArray()
+        res.send(result)
+      }
+    )
+    
+    app.post('/user' , async (req , res)=>{
+      const user = req.body;
+     const result = await userCollection.insertOne(user);
       res.send(result)
     })
 
