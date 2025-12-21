@@ -201,7 +201,20 @@ async function run() {
     
     app.post('/user' , async (req , res)=>{
       const user = req.body;
+      user.createdAt = new Date().toISOString();
+      user.lastLoggedIn = new Date().toISOString();
+      user.role = 'client' ;
+      const query = {email : user.email}
+      const sameUser = await userCollection.findOne(query)
+      if(sameUser){
+        const result = await userCollection.updateOne(query , {
+          $set :{
+            lastLoggedIn : new Date().toISOString()
+          }
+        })
+      }
      const result = await userCollection.insertOne(user);
+    // console.log(user , sameUser)
       res.send(result)
     })
 
