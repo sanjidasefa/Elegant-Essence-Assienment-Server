@@ -218,11 +218,7 @@ async function run() {
       res.send(result)
     })
 
-   app.get('/user/role/:email', verifyUser , async (req, res)=>{
-    const email = req.params.email;
-    const result = await userCollection.findOne({email})
-    res.send({role : result?.role})
-   })
+ 
 
     await client.db("admin").command({ ping: 1 });
     console.log(
