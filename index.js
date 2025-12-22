@@ -57,21 +57,21 @@ async function run() {
       res.send(result);
     });
 
-   app.get("/my-projects", verifyUser, async (req, res) => {
-  const email = req.query.email;
-  const query = {};
-  if (email) {
-    if (email !== req.tokenEmail) {
-      return res.status(403).send({ message: "forbidden access" });
-    }
-    query["decorator.email"] = email; 
-  }
+    app.get("/my-projects", verifyUser, async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        if (email !== req.tokenEmail) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        query["decorator.email"] = email;
+      }
 
-  const result = await serviceCollection.find(query).toArray();
-  res.send(result);
-});
+      const result = await serviceCollection.find(query).toArray();
+      res.send(result);
+    });
 
-    app.get("/decorators-list",verifyUser, async (req, res) => {
+    app.get("/decorators-list", verifyUser, async (req, res) => {
       const result = await decoratorCollection
         .find()
         .sort({ rating: 1 })
@@ -86,7 +86,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/Service",verifyUser, async (req, res) => {
+    app.post("/Service", verifyUser, async (req, res) => {
       const addService = req.body;
       const result = await serviceCollection.insertOne(addService);
       res.send(result);
@@ -123,9 +123,7 @@ async function run() {
     });
 
     app.post("/serviceBooking", async (req, res) => {
-      const addService = {...req.body,
-        email : req.body.client.clientEmail
-      };
+      const addService = { ...req.body, email: req.body.client.clientEmail };
       const result = await bookingCollection.insertOne(addService);
       res.send(result);
     });
@@ -177,48 +175,51 @@ async function run() {
       res.send(result);
     });
 
-     app.put('/service/:id' , async (req , res)=>{
-      const data = {...req.body}
+    app.put("/service/:id", async (req, res) => {
+      const data = { ...req.body };
       delete data._id;
       const id = req.params.id;
-      const query = {_id : new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const update = {
-        $set: data
-      }
-      const options = {}
-      const result = await serviceCollection.updateOne(query , update , options)
-      res.send(result)
-    })
+        $set: data,
+      };
+      const options = {};
+      const result = await serviceCollection.updateOne(query, update, options);
+      res.send(result);
+    });
 
-     app.get('/manageBookings/:email', verifyUser, async (req, res) => {
-        const email = req.params.email
-        const result = await bookingCollection
-          .find({'client.clientEmail' : email })
-          .toArray()
-        res.send(result)
-      }
-    )
-    
-    app.post('/user' , async (req , res)=>{
+    app.get("/manageBookings/:email", verifyUser, async (req, res) => {
+      const email = req.params.email;
+      const result = await bookingCollection
+        .find({ "client.clientEmail": email })
+        .toArray();
+      res.send(result);
+    });
+
+    app.post("/user", async (req, res) => {
       const user = req.body;
       user.createdAt = new Date().toISOString();
       user.lastLoggedIn = new Date().toISOString();
-      user.role = 'client' ;
-      const query = {email : user.email}
-      const sameUser = await userCollection.findOne(query)
-      if(sameUser){
-        const result = await userCollection.updateOne(query , {
-          $set :{
-            lastLoggedIn : new Date().toISOString()
-          }
-        })
+      user.role = "client";
+      const query = { email: user.email };
+      const sameUser = await userCollection.findOne(query);
+      if (sameUser) {
+        const result = await userCollection.updateOne(query, {
+          $set: {
+            lastLoggedIn: new Date().toISOString(),
+          },
+        });
       }
-     const result = await userCollection.insertOne(user);
-    // console.log(user , sameUser)
-      res.send(result)
-    })
+      const result = await userCollection.insertOne(user);
+      // console.log(user , sameUser)
+      res.send(result);
+    });
 
- 
+    app.get("/user/role/:email", verifyUser, async (req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.findOne({ email });
+      res.send({ role: result?.role });
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
