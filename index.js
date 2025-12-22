@@ -223,7 +223,11 @@ async function run() {
     });
      
     app.post('handleChangeRole' , verifyUser, async (req, res)=>{
-      const email = req.tokenEmail
+      const email = req.tokenEmail;
+      const sameEmail = await changeRoleCollection.findOne({email})
+      if(sameEmail){
+        return res.status(409).send({massage : 'same Email '})
+      }
       const result = await changeRoleCollection.insertOne({email})
       res.send(result)
     })
