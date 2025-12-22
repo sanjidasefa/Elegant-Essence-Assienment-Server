@@ -51,6 +51,7 @@ async function run() {
     const bookingCollection = elegantEssence.collection("bookingColl");
     const decoratorCollection = elegantEssence.collection("decoratorColl");
     const userCollection = elegantEssence.collection("userColl");
+    const changeRoleCollection = elegantEssence.collection("changeRoleColl");
 
     app.get("/Service", async (req, res) => {
       const result = await serviceCollection.find().toArray();
@@ -220,6 +221,12 @@ async function run() {
       const result = await userCollection.findOne({ email : req.tokenEmail });
       res.send({ role: result?.role });
     });
+     
+    app.post('handleChangeRole' , verifyUser, async (req, res)=>{
+      const email = req.tokenEmail
+      const result = await changeRoleCollection.insertOne({email})
+      res.send(result)
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log(
