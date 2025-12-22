@@ -128,7 +128,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/serviceBooking", verifyUser, async (req, res) => {
+    app.get("/serviceBooking",  async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
@@ -215,9 +215,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user/role/:email", verifyUser, async (req, res) => {
-      const email = req.params.email;
-      const result = await userCollection.findOne({ email });
+    app.get("/user/role", verifyUser, async (req, res) => {
+      // const email = req.params.email;
+      const result = await userCollection.findOne({ email : req.tokenEmail });
       res.send({ role: result?.role });
     });
 
