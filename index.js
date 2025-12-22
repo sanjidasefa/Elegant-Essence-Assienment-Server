@@ -71,7 +71,7 @@ async function run() {
   res.send(result);
 });
 
-    app.get("/decorators-list", async (req, res) => {
+    app.get("/decorators-list",verifyUser, async (req, res) => {
       const result = await decoratorCollection
         .find()
         .sort({ rating: 1 })
@@ -86,7 +86,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/Service", async (req, res) => {
+    app.post("/Service",verifyUser, async (req, res) => {
       const addService = req.body;
       const result = await serviceCollection.insertOne(addService);
       res.send(result);
@@ -217,6 +217,12 @@ async function run() {
     // console.log(user , sameUser)
       res.send(result)
     })
+
+   app.get('/user/role/:email', verifyUser , async (req, res)=>{
+    const email = req.params.email;
+    const result = await userCollection.findOne({email})
+    res.send({role : result?.role})
+   })
 
     await client.db("admin").command({ ping: 1 });
     console.log(
