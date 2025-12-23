@@ -199,6 +199,7 @@ async function run() {
 
     app.post("/user", async (req, res) => {
       const user = req.body;
+      if (user.number) user.number = parseInt(user.number);
       user.createdAt = new Date().toISOString();
       user.lastLoggedIn = new Date().toISOString();
       user.role = "client";
@@ -210,7 +211,7 @@ async function run() {
             lastLoggedIn: new Date().toISOString(),
           },
         });
-        return res.send({massage : 'updated'})
+        return res.send({ massage: "updated" });
       }
       const result = await userCollection.insertOne(user);
       // console.log(user , sameUser)
@@ -219,34 +220,59 @@ async function run() {
 
     app.get("/user/role", verifyUser, async (req, res) => {
       // const email = req.params.email;
-      const result = await userCollection.findOne({ email : req.tokenEmail });
+      const result = await userCollection.findOne({ email: req.tokenEmail });
       res.send({ role: result?.role });
     });
-     
-    app.post('/handleChangeRole' , verifyUser, async (req, res)=>{
+
+    app.post("/handleChangeRole", verifyUser, async (req, res) => {
       const email = req.tokenEmail;
-      const sameEmail = await changeRoleCollection.findOne({email})
-      if(sameEmail){
-        return res.status(409).send({massage : 'same Email '})
+      const { role } = req.body;
+      const sameEmail = await changeRoleCollection.findOne({ email });
+      if (sameEmail) {
+        return res.status(409).send({ massage: "same Email " });
       }
-      const result = await changeRoleCollection.insertOne({email})
-      res.send(result)
-    })
+      const result = await changeRoleCollection.insertOne({
+        email,
+        reqRole: role,
+        status: "pending",
+      });
+      res.send(result);
+    });
 
-   app.get('/handleChangeRole', verifyUser , async(req, res)=>{
-     const result = await changeRoleCollection.find().toArray()
-     res.send(result)
-   })
+    app.get("/handleChangeRole", verifyUser, async (req, res) => {
+      const result = await changeRoleCollection.find().toArray();
+      res.send(result);
+    });
 
-    app.patch('/handleChangeRole', verifyUser , async (req, res) => {
-      const { email, role } = req.body
+    app.patch("/handleChangeRole", verifyUser, async (req, res) => {
+      const { email, role, name, profilePhoto, location } = req.body;
       const result = await userCollection.updateOne(
         { email },
         { $set: { role } }
-      )
-       await changeRoleCollection.deleteOne({ email })
-      res.send(result)
-    })
+      );
+      await changeRoleCollection.deleteOne({ email });
+
+      if (role === "decorator") {
+        const update = await decoratorCollection.findOne({ email });
+        if (!update) {
+          const newDecorator = {
+            email,
+            name,
+            rating,
+            totalReviews,
+            experienceYears,
+            specialties,
+            topServices,
+            isVerified: false,
+            createdAt: new Date(),
+            approvedAt: new Date(),
+          };
+
+          await decoratorCollection.insertOne(newDecorator);
+        }
+      }
+      res.send(result);
+    });
 
     // await client.db("admin").command({ ping: 1 });
     // console.log(
