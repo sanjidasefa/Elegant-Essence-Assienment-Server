@@ -192,7 +192,7 @@ async function run() {
     app.get("/manageBookings", verifyUser, async (req, res) => {
       // const email = req.params.email;
       const result = await bookingCollection
-        .find({ "client.clientEmail": tokenEmail })
+        .find({ "client.clientEmail": req.tokenEmail })
         .toArray();
       res.send(result);
     });
@@ -210,6 +210,7 @@ async function run() {
             lastLoggedIn: new Date().toISOString(),
           },
         });
+        return res.send({massage : 'updated'})
       }
       const result = await userCollection.insertOne(user);
       // console.log(user , sameUser)
@@ -243,7 +244,7 @@ async function run() {
         { email },
         { $set: { role } }
       )
-      await sellerRequestsCollection.deleteOne({ email })
+      // await sellerRequestsCollection.deleteOne({ email })
       res.send(result)
     })
 
