@@ -72,7 +72,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/decorators-list", verifyUser, async (req, res) => {
+    app.get("/decorators-list", async (req, res) => {
       const result = await decoratorCollection
         .find()
         .sort({ rating: 1 })
@@ -129,7 +129,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/serviceBooking",  async (req, res) => {
+    app.get("/serviceBooking", verifyUser, async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
@@ -189,10 +189,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/manageBookings/:email", verifyUser, async (req, res) => {
-      const email = req.params.email;
+    app.get("/manageBookings", verifyUser, async (req, res) => {
+      // const email = req.params.email;
       const result = await bookingCollection
-        .find({ "client.clientEmail": email })
+        .find({ "client.clientEmail": tokenEmail })
         .toArray();
       res.send(result);
     });
@@ -222,7 +222,7 @@ async function run() {
       res.send({ role: result?.role });
     });
      
-    app.post('handleChangeRole' , verifyUser, async (req, res)=>{
+    app.post('/handleChangeRole' , verifyUser, async (req, res)=>{
       const email = req.tokenEmail;
       const sameEmail = await changeRoleCollection.findOne({email})
       if(sameEmail){
@@ -232,10 +232,25 @@ async function run() {
       res.send(result)
     })
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+   app.get('/handleChangeRole', verifyUser , async(req, res)=>{
+     const result = await changeRoleCollection.find().toArray()
+     res.send(result)
+   })
+
+    app.patch('/handleChangeRole', verifyUser , async (req, res) => {
+      const { email, role } = req.body
+      const result = await changeRoleCollection.updateOne(
+        { email },
+        { $set: { role } }
+      )
+      await sellerRequestsCollection.deleteOne({ email })
+      res.send(result)
+    })
+
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
   }
 }
