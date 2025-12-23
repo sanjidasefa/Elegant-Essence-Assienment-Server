@@ -240,11 +240,11 @@ async function run() {
 
     app.patch('/handleChangeRole', verifyUser , async (req, res) => {
       const { email, role } = req.body
-      const result = await changeRoleCollection.updateOne(
+      const result = await userCollection.updateOne(
         { email },
         { $set: { role } }
       )
-      // await sellerRequestsCollection.deleteOne({ email })
+       await changeRoleCollection.deleteOne({ email })
       res.send(result)
     })
 
