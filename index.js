@@ -54,7 +54,16 @@ async function run() {
     const changeRoleCollection = elegantEssence.collection("changeRoleColl");
 
     app.get("/Service", async (req, res) => {
-      const result = await serviceCollection.find().toArray();
+      const search  = req.query.search || ''
+     const query = search
+    ? {
+       serviceName: {
+          $regex: search,
+          $options: "i", 
+        },
+      }
+    : {};
+      const result = await serviceCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -138,7 +147,7 @@ async function run() {
           return res.status(403).send({ message: "forbidden access" });
         }
       }
-      const result = await bookingCollection.find(query).toArray();
+      const result = await bookingCollection.find(query).sort({ status: 1, createdAt : -1 }).toArray();
       res.send(result);
     });
 
