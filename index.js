@@ -226,12 +226,13 @@ async function run() {
 
     app.post("/handleChangeRole", verifyUser, async (req, res) => {
       const email = req.tokenEmail;
-      const { role } = req.body;
+      const payload  = req.body;
       const sameEmail = await changeRoleCollection.findOne({ email });
       if (sameEmail) {
         return res.status(409).send({ massage: "same Email " });
       }
       const result = await changeRoleCollection.insertOne({
+        ...payload,
         email,
         reqRole: role,
         status: "pending",
@@ -245,7 +246,10 @@ async function run() {
     });
 
     app.patch("/handleChangeRole", verifyUser, async (req, res) => {
-      const { email, role, name, profilePhoto, location } = req.body;
+     const { 
+    email, role, name, rating, totalReviews, 
+    experienceYears, specialties, topServices 
+  } = req.body;
       const result = await userCollection.updateOne(
         { email },
         { $set: { role } }
@@ -267,7 +271,6 @@ async function run() {
             createdAt: new Date(),
             approvedAt: new Date(),
           };
-
           await decoratorCollection.insertOne(newDecorator);
         }
       }
