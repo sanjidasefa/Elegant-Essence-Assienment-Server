@@ -53,6 +53,23 @@ async function run() {
     const userCollection = elegantEssence.collection("userColl");
     const changeRoleCollection = elegantEssence.collection("changeRoleColl");
 
+    const verifyAdmin = async (req , res , next)=>{
+  const email = req.tokenEmail
+  const user = await userCollection.findOne({email})
+  if(user?.role !== 'admin'){
+    return res.send({massage : 'you are not admin'})
+  }
+  next()
+}
+    const verifyDecorator = async (req , res , next)=>{
+  const email = req.tokenEmail
+  const user = await userCollection.findOne({email})
+  if( user?.role !== 'decorator'){
+    return res.send({massage : 'you are not decorator'})
+  }
+  next()
+}
+
     app.get("/Service", async (req, res) => {
       const search  = req.query.search || ''
      const query = search
@@ -67,7 +84,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/my-projects", verifyUser, async (req, res) => {
+    app.get("/my-projects", verifyUser,verifyDecorator, async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
@@ -78,6 +95,11 @@ async function run() {
       }
 
       const result = await serviceCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/all-services", verifyUser,verifyAdmin, async (req, res) => {
+      const result = await serviceCollection.find({}).toArray();
       res.send(result);
     });
 
@@ -132,13 +154,13 @@ async function run() {
       res.send({ url: session.url });
     });
 
-    app.post("/serviceBooking", async (req, res) => {
+    app.post("/serviceBooking",verifyUser, async (req, res) => {
       const addService = { ...req.body, email: req.body.client.clientEmail };
       const result = await bookingCollection.insertOne(addService);
       res.send(result);
     });
 
-    app.get("/serviceBooking", verifyUser, async (req, res) => {
+    app.get("/serviceBooking", verifyUser , async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
@@ -148,6 +170,11 @@ async function run() {
         }
       }
       const result = await bookingCollection.find(query).sort({ status: 1, createdAt : -1 }).toArray();
+      res.send(result);
+    });
+
+    app.get("/all-Bookings", verifyUser ,verifyAdmin, async (req, res) => {
+      const result = await bookingCollection.find({}).sort({ status: 1, createdAt : -1 }).toArray();
       res.send(result);
     });
 
@@ -198,7 +225,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/manageBookings", verifyUser, async (req, res) => {
+    app.get("/manageBookings", verifyUser, verifyAdmin , async (req, res) => {
       // const email = req.params.email;
       const result = await bookingCollection
         .find({ "client.clientEmail": req.tokenEmail })
@@ -248,6 +275,7 @@ async function run() {
       });
       res.send(result);
     });
+
     app.delete("/handleChangeRole/:id", async (req, res) => {  
      const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -255,12 +283,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/handleChangeRole", verifyUser, async (req, res) => {
+    app.get("/handleChangeRole", verifyUser,verifyAdmin, async (req, res) => {
       const result = await changeRoleCollection.find().toArray();
       res.send(result);
     });
 
-    app.patch("/handleChangeRole", verifyUser, async (req, res) => {
+    app.patch("/handleChangeRole", verifyUser,verifyAdmin, async (req, res) => {
       const {
         email,
         role,
@@ -298,6 +326,14 @@ async function run() {
       }
       res.send(result);
     });
+
+  app.get("/todays-schedule", verifyUser, verifyDecorator, async (req, res) => {
+  const email = req.tokenEmail;
+  const todaysBooking = await bookingCollection.find({
+    "decorator.email": email
+  }).sort({ createdAt: -1 }).toArray();
+  res.send(todaysBooking);
+});
 
     // await client.db("admin").command({ ping: 1 });
     // console.log(
