@@ -279,7 +279,7 @@ async function run() {
     app.delete("/handleChangeRole/:id", async (req, res) => {  
      const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await serviceCollection.deleteOne(query);
+      const result = await changeRoleCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -327,52 +327,53 @@ async function run() {
       res.send(result);
     });
 
-  app.get("/todays-schedule", verifyUser, verifyDecorator, async (req, res) => {
+app.get("/todays-schedule", verifyUser, verifyDecorator, async (req, res) => {
   const email = req.tokenEmail;
-  const todaysBooking = await bookingCollection.find({
+  console.log("TOKEN EMAIL =>", email);
+  const assignedBookings = await bookingCollection.find({
+    status: "assigned",
     "decorator.email": email
-  }).sort({ createdAt: -1 }).toArray();
-  res.send(todaysBooking);
-});
-
-  app.patch("/assign-decorators/:id" , verifyUser, verifyAdmin, async (req, res)=>{
-    const bookingId = req.params.id;
-    const {decoratorEmail} = req.body 
-    const booking = await bookingCollection.findOne({
-      _id: new ObjectId(bookingId)
-    })
-    if(!booking) {
-      return res.status(404).send({massage: "bookings not found"})
-    }
-    if(booking.status !== "paid"){
-      return res.status(400).send({massage: "decorator not found"})
-    }
-    const decorator = await decoratorCollection.findOne({email : decoratorEmail})
-  if (!decorator) {
-      return res.status(404).send({ message: "Decorator not found" });
-    }
-
-    // Assign decorator
-    const result = await bookingCollection.updateOne(
-      { _id: new ObjectId(bookingId) },
-      {
-        $set: {
-          status: "assigned",
-          decorator: {
-            email: decorator.email,
-            name: decorator.name,
-            assignedAt: new Date(),
-          },
-        },
-      }
-    );
-
-    res.send({
-      success: true,
-      message: "Decorator assigned successfully",
-      result,
-    });
   })
+  .sort({ "decorator.assignedAt": -1 }) // optional
+  .toArray();
+  console.log("FOUND BOOKINGS =>", assignedBookings.length);
+  res.send(assignedBookings);
+})
+
+app.patch("/assign-decorators/:id", verifyUser, verifyAdmin, async (req, res) => {
+  const bookingId = req.params.id;
+  const { decoratorEmail } = req.body;
+  const booking = await bookingCollection.findOne({ _id: new ObjectId(bookingId) });
+  if (!booking) return res.status(404).send({ message: "Booking not found" });
+  if (booking.status !== "paid")
+    return res.status(400).send({ message: "Only paid bookings can be assigned" });
+  const decorator = await decoratorCollection.findOne({ email: decoratorEmail });
+  if (!decorator) return res.status(404).send({ message: "Decorator not found" });
+  const result = await bookingCollection.updateOne(
+    { _id: new ObjectId(bookingId) },
+    {
+      $set: {
+        status: "assigned",
+        decorator: {
+          email: decorator.email,
+          name: decorator.name,
+          assignedAt: new Date(),
+        },
+      },
+    }
+  );
+  res.send(result);
+})
+
+app.patch("/decline-booking/:id", verifyUser, verifyAdmin, async (req, res) => {
+  const bookingId = req.params.id;
+  const { status } = req.body; // "declined"
+  const result = await bookingCollection.updateOne(
+    { _id: new ObjectId(bookingId) },
+    { $set: { status } }
+  );
+  res.send(result);
+})
 
     // await client.db("admin").command({ ping: 1 });
     // console.log(
