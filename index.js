@@ -329,14 +329,12 @@ async function run() {
 
 app.get("/todays-schedule", verifyUser, verifyDecorator, async (req, res) => {
   const email = req.tokenEmail;
-  console.log("TOKEN EMAIL =>", email);
-  const assignedBookings = await bookingCollection.find({
+ const assignedBookings = await bookingCollection.find({
     status: "assigned",
     "decorator.email": email
   })
   .sort({ "decorator.assignedAt": -1 }) // optional
   .toArray();
-  console.log("FOUND BOOKINGS =>", assignedBookings.length);
   res.send(assignedBookings);
 })
 
@@ -344,11 +342,11 @@ app.patch("/assign-decorators/:id", verifyUser, verifyAdmin, async (req, res) =>
   const bookingId = req.params.id;
   const { decoratorEmail } = req.body;
   const booking = await bookingCollection.findOne({ _id: new ObjectId(bookingId) });
-  if (!booking) return res.status(404).send({ message: "Booking not found" });
+  if (!booking) return res.send({ message: "Booking not found" });
   if (booking.status !== "paid")
     return res.status(400).send({ message: "Only paid bookings can be assigned" });
   const decorator = await decoratorCollection.findOne({ email: decoratorEmail });
-  if (!decorator) return res.status(404).send({ message: "Decorator not found" });
+  if (!decorator) return res.send({ message: "Decorator not found" });
   const result = await bookingCollection.updateOne(
     { _id: new ObjectId(bookingId) },
     {
