@@ -250,8 +250,7 @@ async function run() {
         return res.send({ massage: "updated" });
       }
       const result = await userCollection.insertOne(user);
-      // console.log(user , sameUser)
-      res.send(result);
+            res.send(result);
     });
 
     app.get("/user/role", verifyUser, async (req, res) => {
@@ -333,7 +332,7 @@ app.get("/todays-schedule", verifyUser, verifyDecorator, async (req, res) => {
     status: "assigned",
     "decorator.email": email
   })
-  .sort({ "decorator.assignedAt": -1 }) // optional
+  .sort({ "decorator.assignedAt": -1 })
   .toArray();
   res.send(assignedBookings);
 })
@@ -342,9 +341,6 @@ app.patch("/assign-decorators/:id", verifyUser, verifyAdmin, async (req, res) =>
   const bookingId = req.params.id;
   const { decoratorEmail } = req.body;
   const booking = await bookingCollection.findOne({ _id: new ObjectId(bookingId) });
-  if (!booking) return res.send({ message: "Booking not found" });
-  if (booking.status !== "paid")
-    return res.status(400).send({ message: "Only paid bookings can be assigned" });
   const decorator = await decoratorCollection.findOne({ email: decoratorEmail });
   if (!decorator) return res.send({ message: "Decorator not found" });
   const result = await bookingCollection.updateOne(
@@ -365,13 +361,43 @@ app.patch("/assign-decorators/:id", verifyUser, verifyAdmin, async (req, res) =>
 
 app.patch("/decline-booking/:id", verifyUser, verifyAdmin, async (req, res) => {
   const bookingId = req.params.id;
-  const { status } = req.body; // "declined"
+  const { status } = req.body;
   const result = await bookingCollection.updateOne(
     { _id: new ObjectId(bookingId) },
     { $set: { status } }
   );
   res.send(result);
 })
+
+app.patch("/updatedBooking/:id", verifyUser, verifyDecorator, async(req, res)=>{
+  const update = req.params.id;
+  const { status } = req.body;
+  const result = await bookingCollection.updateOne(
+    { _id: new ObjectId(update) },
+    { $set: { status } }
+  );
+  res.send(result);
+})
+app.patch("/DeclineUpdatedBooking/:id", verifyUser, verifyDecorator, async(req, res)=>{
+  const update = req.params.id;
+  const { status } = req.body;
+  const result = await bookingCollection.updateOne(
+    { _id: new ObjectId(update) },
+    { $set: { status } }
+  );
+  res.send(result);
+})
+app.get("/decorator-completed", verifyUser, verifyDecorator,async (req, res) => {
+    const email = req.tokenEmail;
+    const completedBookings = await bookingCollection
+      .find({
+        status: "completed",
+        "decorator.email": email,
+      })
+      .toArray();
+    res.send(completedBookings);
+  }
+);
 
     // await client.db("admin").command({ ping: 1 });
     // console.log(
