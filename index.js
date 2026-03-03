@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
-const port = process.env.port || 3000;
+const port = process.env.PORT || 3000;
 const admin = require("firebase-admin");
 const cors = require("cors");
 
@@ -52,7 +52,7 @@ async function run() {
     const decoratorCollection = elegantEssence.collection("decoratorColl");
     const userCollection = elegantEssence.collection("userColl");
     const changeRoleCollection = elegantEssence.collection("changeRoleColl");
-
+    
     const verifyAdmin = async (req , res , next)=>{
   const email = req.tokenEmail
   const user = await userCollection.findOne({email})
@@ -70,19 +70,33 @@ async function run() {
   next()
 }
 
-    app.get("/Service", async (req, res) => {
-      const search  = req.query.search || ''
-     const query = search
-    ? {
-       serviceName: {
-          $regex: search,
-          $options: "i", 
-        },
-      }
-    : {};
-      const result = await serviceCollection.find(query).toArray();
-      res.send(result);
-    });
+ app.get("/Service", async (req, res) => {
+  const { search, category, sort } = req.query;
+  let query = {};
+  if (search) {
+    query.serviceName = { $regex: search, $options: "i" };
+  }
+  if (category && category !== "All") {
+    query.category = category;
+  }
+  let sortOptions = {};
+  if (sort === "lowToHigh") {
+    sortOptions.servicePrice = 1;
+  } else if (sort === "highToLow") {
+    sortOptions.servicePrice = -1;
+  } else {
+    sortOptions.createAt = -1;
+  }
+  try {
+    const result = await serviceCollection
+      .find(query)
+      .sort(sortOptions)
+      .toArray();
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching services" });
+  }
+});
 
     app.get("/my-projects", verifyUser,verifyDecorator, async (req, res) => {
       const email = req.query.email;
@@ -250,11 +264,10 @@ async function run() {
         return res.send({ massage: "updated" });
       }
       const result = await userCollection.insertOne(user);
-            res.send(result);
+            res.status(201).send(result);
     });
 
     app.get("/user/role", verifyUser, async (req, res) => {
-      // const email = req.params.email;
       const result = await userCollection.findOne({ email: req.tokenEmail });
       res.send({ role: result?.role });
     });
@@ -395,14 +408,44 @@ app.get("/decorator-completed", verifyUser, verifyDecorator,async (req, res) => 
         "decorator.email": email,
       })
       .toArray();
-    res.send(completedBookings);
+    res.status(200).send(completedBookings);
   }
 );
 
-    // await client.db("admin").command({ ping: 1 });
-    // console.log(
-    //   "Pinged your deployment. You successfully connected to MongoDB!"
-    // );
+app.get("/dashboard-stats", verifyUser, async (req, res) => {
+  const email = req.tokenEmail;
+  const user = await userCollection.findOne({ email });
+  const role = user?.role;
+  const roleDistribution = await userCollection.aggregate([
+    {
+      $group: {
+        _id: "$role",
+        count: { $sum: 1 }
+      }
+    }
+  ]).toArray();
+  const totalUsers = await userCollection.estimatedDocumentCount(); 
+  let specificStats = {};
+  if (role === "admin") {
+    const payments = await bookingCollection.find({ status: "paid" }).toArray();
+    const revenue = payments.reduce((sum, p) => sum + (parseFloat(p.servicePrice) || 0), 0);
+    const bookings = await bookingCollection.estimatedDocumentCount();
+    specificStats = { revenue, bookings, type: "admin" };
+  } 
+  else if (role === "decorator") {
+    const myProjects = await bookingCollection.countDocuments({ "decorator.email": email });
+    const completed = await bookingCollection.countDocuments({ "decorator.email": email, status: "completed" });
+    specificStats = { myProjects, completed, type: "decorator" };
+  } 
+  else {
+    const myBookings = await bookingCollection.countDocuments({ email: email });
+    const myPayments = await bookingCollection.find({ email: email, status: "paid" }).toArray();
+    const totalSpent = myPayments.reduce((sum, p) => sum + (parseFloat(p.servicePrice) || 0), 0);    
+    specificStats = { myBookings, totalSpent, type: "user" };
+  }
+  res.send({ totalUsers, roleDistribution, ...specificStats });
+});
+
   } finally {
   }
 }
@@ -411,3 +454,4 @@ run().catch(console.dir);
 app.listen(port, () => {
   console.log(`${port}`);
 });
+module.exports = app;
